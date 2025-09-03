@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm, UseFormReturn, useWatch } from "react-hook-form";
@@ -85,27 +86,58 @@ export function AdminTab({ form, storeId, onIncentivesCalculated, incentives, ad
     const goals = useWatch({ control, name: 'goals' });
 
     const handleAddSeller = () => {
-        const newSellerName = getValues("newSellerName");
-        const newSellerPassword = getValues("newSellerPassword");
-
-        if (!newSellerName || newSellerName.trim() === "") {
-            setError("newSellerName", { type: "manual", message: "Nome é obrigatório." });
-            return;
+        try {
+            const newSellerName = getValues("newSellerName");
+            const newSellerPassword = getValues("newSellerPassword");
+    
+            // 🔹 Valida nome obrigatório
+            if (!newSellerName || newSellerName.trim() === "") {
+                setError("newSellerName", { type: "manual", message: "Nome é obrigatório." });
+                return;
+            }
+    
+            // 🔹 Valida duplicação de nome
+            const currentSellers = getValues("sellers") || [];
+            if (currentSellers.some(s => s.name.toLowerCase() === newSellerName.toLowerCase())) {
+                toast({
+                    variant: "destructive",
+                    title: "Erro",
+                    description: "Já existe um vendedor com esse nome.",
+                });
+                return;
+            }
+    
+            // 🔹 Limpa erros antigos
+            clearErrors(["newSellerName", "newSellerPassword"]);
+    
+            // 🔹 Gera senha final
+            const finalPassword = newSellerPassword && newSellerPassword.trim().length > 0
+                ? newSellerPassword.trim()
+                : newSellerName.trim().toLowerCase();
+    
+            // 🔹 Valida senha mínima
+            if (finalPassword.length < 4) {
+                setError("newSellerPassword", {
+                    type: "manual",
+                    message: "A senha deve ter no mínimo 4 caracteres.",
+                });
+                return;
+            }
+    
+            // 🔹 Chama a função do dashboard para salvar o vendedor
+            addSeller(newSellerName, finalPassword);
+    
+            // 🔹 Limpa campos do formulário
+            setValue("newSellerName", "");
+            setValue("newSellerPassword", "");
+        } catch (error) {
+            console.error("Erro ao adicionar vendedor:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro inesperado",
+                description: "Ocorreu um problema ao salvar o vendedor.",
+            });
         }
-        
-        clearErrors(["newSellerName", "newSellerPassword"]);
-        const finalPassword = newSellerPassword && newSellerPassword.trim().length > 0 
-            ? newSellerPassword.trim() 
-            : newSellerName.trim().toLowerCase();
-        
-        if (finalPassword.length < 4) {
-             setError("newSellerPassword", { type: "manual", message: "A senha deve ter no mínimo 4 caracteres." });
-            return;
-        }
-        
-        addSeller(newSellerName!, finalPassword);
-        setValue("newSellerName", "");
-        setValue("newSellerPassword", "");
     };
 
     const removeSeller = (sellerId: string) => {
@@ -365,3 +397,5 @@ export function AdminTab({ form, storeId, onIncentivesCalculated, incentives, ad
         </Card>
     )
 }
+
+    

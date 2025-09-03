@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,10 +13,6 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-import {
-  incentiveProjection,
-  type IncentiveProjectionOutput,
-} from "@/ai/flows/incentive-projection";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 
@@ -32,6 +29,7 @@ import { loadState, saveState, Seller, Goals, Store, Incentives } from "@/lib/st
 import { AdminTab } from "@/components/admin-tab";
 import { SellerTab } from "@/components/seller-tab";
 import { Skeleton } from "./ui/skeleton";
+import { IncentiveProjectionOutput } from "@/ai/flows/incentive-projection";
 
 const availableAvatarIds = ['avatar1', 'avatar2', 'avatar3', 'avatar4', 'avatar5', 'avatar6', 'avatar7', 'avatar8', 'avatar9', 'avatar10'];
 
@@ -184,26 +182,57 @@ export function GoalGetterDashboard({ storeId }: { storeId: string }) {
 
   const addSeller = useCallback((name: string, pass: string) => {
     const currentSellers = getValues("sellers") || [];
+
+    // 🔹 Valida duplicação de nome
+    if (currentSellers.some(seller => seller.name.toLowerCase() === name.toLowerCase())) {
+        toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Já existe um vendedor com esse nome.",
+        });
+        return;
+    }
+
+    // 🔹 Gera avatar aleatório
     const existingAvatarIds = new Set(currentSellers.map(s => s.avatarId));
     let randomAvatarId = availableAvatarIds[Math.floor(Math.random() * availableAvatarIds.length)];
-
     if (existingAvatarIds.size < availableAvatarIds.length) {
         while (existingAvatarIds.has(randomAvatarId)) {
             randomAvatarId = availableAvatarIds[Math.floor(Math.random() * availableAvatarIds.length)];
         }
     }
+
+    // 🔹 Cria novo vendedor
     const newSeller: Seller = {
         id: crypto.randomUUID(),
         name,
         password: pass,
         avatarId: randomAvatarId,
-        vendas: 0, pa: 0, ticketMedio: 0, corridinhaDiaria: 0,
+        vendas: 0,
+        pa: 0,
+        ticketMedio: 0,
+        corridinhaDiaria: 0,
     };
+
     const updatedSellers = [...currentSellers, newSeller];
+
+    // 🔹 Atualiza formulário do react-hook-form
     setValue("sellers", updatedSellers, { shouldDirty: true });
-    toast({ title: "Vendedor adicionado!", description: `${name} foi adicionado(a) com sucesso.` });
+
+    // 🔹 Salva imediatamente no localStorage
+    const currentState = loadState();
+    currentState.sellers[storeId] = updatedSellers;
+    saveState(currentState);
+
+    // 🔹 Exibe toast de sucesso
+    toast({
+        title: "Vendedor adicionado!",
+        description: `${name} foi adicionado(a) com sucesso.`,
+    });
+
+    // 🔹 Abre automaticamente a aba do vendedor recém-criado
     router.push(`/dashboard/${storeId}?tab=${newSeller.id}`);
-  }, [getValues, setValue, storeId, router, toast]);
+}, [getValues, setValue, storeId, router, toast]);
 
 
   useEffect(() => {
