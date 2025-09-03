@@ -20,15 +20,15 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-primary via-secondary to-primary/80">
-        <Loader2 className="h-16 w-16 animate-spin text-white" />
-        <p className="mt-4 text-white/80">Carregando...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Carregando...</p>
       </div>
     );
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-neutral-light p-6">
+    <main className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
       <motion.div 
         className="flex flex-col items-center gap-8 max-w-4xl w-full"
         initial={{ opacity: 0, y: 20 }}
@@ -40,7 +40,7 @@ export default function Home() {
 
         {/* Título */}
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-extrabold text-neutral-dark drop-shadow-sm">
+          <h1 className="text-4xl font-extrabold text-foreground drop-shadow-sm">
             Seja bem-vindo (a) ao
              Acelera GT 🚀
           </h1>
@@ -48,20 +48,20 @@ export default function Home() {
 
         {/* Card */}
         <motion.div
-          className="w-full max-w-lg backdrop-blur-md bg-white/80 p-8 rounded-3xl shadow-xl border border-gray-200 mt-4"
+          className="w-full max-w-lg bg-card p-8 rounded-3xl shadow-xl border mt-4"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <h2 className="text-center text-xl font-semibold text-neutral-dark mb-6">
+          <h2 className="text-center text-xl font-semibold text-card-foreground mb-6">
             Selecione sua loja para começar. 
           </h2>
 
           {!state || state.stores.length === 0 ? (
-            <div className="flex flex-col items-center text-gray-500 py-6 text-center">
-              <FolderOpen className="h-12 w-12 mb-4 text-gray-400" />
+            <div className="flex flex-col items-center text-muted-foreground py-6 text-center">
+              <FolderOpen className="h-12 w-12 mb-4" />
               <p className="font-medium text-lg">Nenhuma loja encontrada</p>
-              <p className="text-sm mt-1 text-gray-400 max-w-xs">
+              <p className="text-sm mt-1 max-w-xs">
                 O administrador precisa adicionar uma loja no painel global para começar.
               </p>
             </div>
@@ -72,9 +72,9 @@ export default function Home() {
                   asChild
                   size="lg"
                   key={store.id}
-                  className="justify-start h-auto py-4 px-5 rounded-xl border border-gray-200 
-                            bg-gradient-to-r from-primary/90 to-secondary/90 text-white
-                            hover:from-primary hover:to-secondary transition-all 
+                  className="justify-start h-auto py-4 px-5 rounded-xl border
+                            bg-primary text-primary-foreground
+                            hover:bg-primary/90 transition-all 
                             shadow-sm hover:shadow-lg hover:-translate-y-1 group"
                 >
                   <Link href={`/loja/${store.id}`} className="flex items-center gap-4 w-full">
@@ -97,7 +97,7 @@ export default function Home() {
           <Button
             variant="ghost"
             asChild
-            className="text-sm text-gray-600 hover:text-primary transition-colors flex items-center gap-2"
+            className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"
           >
             <Link href="/login?redirect=/admin">
               <Lock className="h-4 w-4" />
