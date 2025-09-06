@@ -1,4 +1,4 @@
-
+// src/app/loja/[storeId]/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -7,14 +7,23 @@ import { Home, Shield, Loader2, ArrowRight, Sun, Moon } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { SellerAvatar } from "@/components/seller-avatar";
 import { useParams, useRouter } from 'next/navigation';
-import { loadState, Seller, Store } from "@/lib/storage";
+import { Store } from "@/lib/storage"; // Removido Seller e loadState que não são mais usados aqui
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 
+// Definindo o tipo para Seller, já que não estamos mais importando de storage.ts
+// O ideal seria ter um arquivo de tipos compartilhado.
+interface Seller {
+  id: string;
+  name: string;
+  avatarId: string;
+  // Outras propriedades que a API retornar podem ser adicionadas aqui
+}
+
 export default function StoreHomePage() {
   const [sellers, setSellers] = useState<Seller[]>([]);
-  const [store, setStore] = useState<Store | null>(null);
+  const [store, setStore] = useState<Store | null>(null); // Mantemos o store para o nome e tema
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
@@ -24,41 +33,56 @@ export default function StoreHomePage() {
   const { toast } = useToast();
   const storeId = params.storeId as string;
 
-  const loadStoreData = useCallback(() => {
-    if (!storeId) {
-      setError("ID da loja não encontrado na URL.");
-      setLoading(false);
-      return;
-    };
-
+  // Carrega os dados da loja (sem os vendedores) do localStorage
+  const loadStoreDetails = useCallback(() => {
+    // Esta parte ainda pode ser útil para carregar rapidamente o nome da loja
+    // ou outras informações que não mudam com frequência.
     try {
-        const decodedStoreId = decodeURIComponent(storeId);
-        const savedState = loadState();
-        const foundStore = savedState.stores.find(s => s.id === decodedStoreId);
-        
-        if (foundStore) {
+        const state = JSON.parse(localStorage.getItem("goalGetterState_v2") || "{}");
+        const foundStore = state.stores?.find((s: Store) => s.id === storeId);
+        if(foundStore) {
             setStore(foundStore);
-            setSellers(savedState.sellers[decodedStoreId] || []);
-            setError(null);
         } else {
-            setError(`Loja com ID "${decodedStoreId}" não foi encontrada.`);
-            toast({
-              variant: "destructive",
-              title: "Erro ao carregar",
-              description: `A loja que você está tentando acessar não foi encontrada.`,
-            });
+             setError(`Loja com ID "${storeId}" não foi encontrada.`);
         }
     } catch (e) {
-        console.error("Failed to load state from localStorage", e);
-        setError("Ocorreu um erro ao carregar os dados da loja.");
-    } finally {
-        setLoading(false);
+        console.error("Failed to load store details from localStorage", e);
+        setError("Ocorreu um erro ao carregar os detalhes da loja.");
     }
-  }, [storeId, toast]);
+  }, [storeId]);
+
 
   useEffect(() => {
-    loadStoreData();
-  }, [loadStoreData]);
+    loadStoreDetails(); // Carrega detalhes da loja como nome, tema, etc.
+    
+    // **AQUI ENTRA O SEU CÓDIGO PARA BUSCAR OS VENDEDORES**
+    async function fetchSellers() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch(`/api/sellers/${storeId}`);
+        if (!response.ok) {
+          throw new Error('Falha ao buscar dados dos vendedores');
+        }
+        const data = await response.json();
+        setSellers(data);
+      } catch (err: any) { // Usando 'any' para capturar a propriedade message
+        setError(err.message);
+        toast({
+            variant: "destructive",
+            title: "Erro de Rede",
+            description: err.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (storeId) {
+      fetchSellers();
+    }
+  // Adicionamos toast e loadStoreDetails às dependências
+  }, [storeId, toast, loadStoreDetails]); 
   
   useEffect(() => {
     const body = document.body;
@@ -130,7 +154,6 @@ export default function StoreHomePage() {
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex flex-col items-center px-4 py-8 transition-colors duration-300">
-      {/* Header */}
       <div className="w-full max-w-2xl flex justify-between items-center mb-8">
         <h1 
             className="text-3xl font-bold text-primary dark:text-gray-100"
@@ -139,7 +162,6 @@ export default function StoreHomePage() {
         </h1>
 
         <div className="flex items-center gap-3">
-          {/* Dark mode toggle */}
           <Button
             variant="outline"
             size="icon"
@@ -148,8 +170,6 @@ export default function StoreHomePage() {
           >
             {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
-
-          {/* Botão todas as lojas */}
           <Button asChild variant="secondary" className="flex items-center gap-2 shadow">
             <Link href="/">
                 <Home className="h-5 w-5" />
@@ -159,17 +179,14 @@ export default function StoreHomePage() {
         </div>
       </div>
 
-      {/* Subtítulo */}
       <p className="text-gray-600 dark:text-gray-300 text-center mb-6 text-lg">
         Selecione seu usuário para começar.
       </p>
 
-      {/* Card principal */}
       <Card className="w-full max-w-md shadow-2xl rounded-2xl dark:bg-gray-800">
         <CardContent className="p-6 space-y-5">
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-100">Acessar Painel</h2>
 
-          {/* Administrador com destaque */}
           <motion.div
             whileHover={{ scale: 1.03 }}
             onClick={handleAdminAccess}
@@ -186,9 +203,8 @@ export default function StoreHomePage() {
             <ArrowRight className="h-5 w-5" />
           </motion.div>
 
-          {/* Lista de usuários */}
           <div className="space-y-3">
-            {(sellers || []).map((seller) => (
+            {sellers.map((seller) => (
               <motion.div
                 key={seller.id}
                 onClick={() => handleSellerAccess(seller.id)}
@@ -215,5 +231,3 @@ export default function StoreHomePage() {
     </div>
   );
 }
-
-
