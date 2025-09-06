@@ -136,11 +136,11 @@ export function ProgressDisplay({ salesData, incentives, rankings }: ProgressDis
                 icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
                 description="Total vendido no período"
             />
-             <MetricCard LAG
+            <MetricCard
                 title="Produtos por Atendimento (PA)"
                 value={String(Number(pa || 0).toFixed(2))}
                 icon={<Package className="h-4 w-4 text-muted-foreground" />}
-                 description="Média de itens por venda"
+                description="Média de itens por venda"
             />
             <MetricCard 
                 title="Ticket Médio" 

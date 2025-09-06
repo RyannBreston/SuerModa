@@ -1,11 +1,11 @@
-import { Pool } from 'pg';
+// src/lib/db.ts
+import { Pool } from '@neondatabase/serverless';
+import dotenv from 'dotenv';
 
-let conn: Pool;
+dotenv.config();
 
-if (!conn) {
-  conn = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
-}
+const conn = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 export default conn;

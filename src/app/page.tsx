@@ -1,21 +1,41 @@
-
+// src/app/page.tsx
 "use client";
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Store as StoreIcon, Lock, Loader2, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AppState, loadState } from "@/lib/storage";
 import { motion } from "framer-motion";
 
+// O tipo Store pode ser movido para um arquivo de tipos compartilhado
+interface Store {
+  id: string;
+  name: string;
+  theme_color: string;
+}
+
 export default function Home() {
-  const [state, setState] = useState<AppState | null>(null);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadedState = loadState();
-    setState(loadedState);
-    setLoading(false);
+    async function fetchStores() {
+      try {
+        const response = await fetch('/api/stores');
+        if (!response.ok) {
+          throw new Error('Não foi possível carregar as lojas');
+        }
+        const data = await response.json();
+        setStores(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStores();
   }, []);
 
   if (loading) {
@@ -65,7 +85,7 @@ export default function Home() {
             Selecione sua loja para começar. 
           </h2>
 
-          {!state || state.stores.length === 0 ? (
+          {!stores || stores.length === 0 ? (
             <div className="flex flex-col items-center text-center text-muted-foreground py-6">
               <FolderOpen className="h-12 w-12 mb-4" />
               <p className="font-medium text-lg">Nenhuma loja encontrada</p>
@@ -75,7 +95,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
-              {state.stores.map((store) => (
+              {stores.map((store) => (
                 <Button
                   asChild
                   size="lg"
