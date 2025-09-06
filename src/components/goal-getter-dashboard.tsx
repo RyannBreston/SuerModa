@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ShieldCheck, Home, CheckCircle } from "lucide-react";
+import { ShieldCheck, Home, CheckCircle, Loader2 } from "lucide-react";
 import { incentiveProjection, type IncentiveProjectionOutput } from "@/ai/flows/incentive-projection";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -20,16 +20,16 @@ import { AdminTab } from "@/components/admin-tab";
 import { SellerTab } from "@/components/seller-tab";
 import { Skeleton } from "./ui/skeleton";
 
-// ... (schemas e types permanecem os mesmos) ...
+// Definições de esquema e tipos
 const sellerSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Nome é obrigatório"),
   password: z.string().min(4, "A senha deve ter pelo menos 4 caracteres"),
-  avatarId: z.string(), // Corrigido para avatar_id para corresponder ao DB
+  avatar_id: z.string(), // Corrigido para corresponder ao DB
   vendas: z.coerce.number().min(0).default(0),
   pa: z.coerce.number().min(0).default(0),
-  ticket_medio: z.coerce.number().min(0).default(0), // Corrigido para snake_case
-  corridinha_diaria: z.coerce.number().min(0).default(0), // Corrigido para snake_case
+  ticket_medio: z.coerce.number().min(0).default(0),
+  corridinha_diaria: z.coerce.number().min(0).default(0),
 });
 
 export const formSchema = z.object({
@@ -43,7 +43,31 @@ export type FormValues = z.infer<typeof formSchema>;
 export type RankingMetric = "vendas" | "pa" | "ticketMedio" | "corridinhaDiaria";
 export type Rankings = Record<string, Record<RankingMetric, number>>;
 
-const DashboardSkeleton = () => ( <div className="container mx-auto p-4 py-8 md:p-8"> <header className="flex items-center justify-between gap-4 mb-8"> <div className="flex items-center gap-4"> <div> <Skeleton className="h-8 w-48 mb-2" /> <Skeleton className="h-4 w-64" /> </div></div><div className="flex items-center gap-2"> <Skeleton className="h-10 w-32" /> <Skeleton className="h-10 w-32" /> </div></header> <div className="border-b mb-4"> <div className="flex items-center gap-2"> <Skeleton className="h-10 w-24" /> <Skeleton className="h-10 w-24" /> <Skeleton className="h-10 w-24" /> </div></div><Skeleton className="h-[500px] w-full" /> </div> );
+const DashboardSkeleton = () => (
+    <div className="container mx-auto p-4 py-8 md:p-8">
+        <header className="flex items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+            <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+            </div>
+        </div>
+        <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+        </div>
+        </header>
+        <div className="border-b mb-4">
+        <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-24" />
+        </div>
+        </div>
+        <Skeleton className="h-[500px] w-full" />
+    </div>
+);
+
 const availableAvatarIds = ["avatar1", "avatar2", "avatar3", "avatar4", "avatar5", "avatar6", "avatar7", "avatar8", "avatar9", "avatar10"];
 
 
@@ -60,22 +84,27 @@ export function GoalGetterDashboard({ storeId }: { storeId: string }) {
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { sellers: [], goals: {} },
+    // **A CORREÇÃO ESTÁ AQUI**
+    // Inicia o formulário com a estrutura completa de metas, garantindo que nenhum valor seja undefined.
+    defaultValues: {
+      newSellerName: "",
+      newSellerPassword: "",
+      sellers: [],
+      goals: getInitialState().goals.default,
+    },
   });
 
   const { reset, getValues, setValue } = form;
 
-  // Lógica de carregamento de dados foi refatorada
   useEffect(() => {
     const adminAuthenticated = sessionStorage.getItem("adminAuthenticated") === "true";
     setIsAdmin(adminAuthenticated);
 
     async function fetchData() {
       try {
-        // Busca lojas e vendedores
         const [sellersRes, storesRes] = await Promise.all([
           fetch(`/api/sellers/${storeId}`),
-          fetch(`/api/stores`), // Busca todas as lojas para encontrar o nome da atual
+          fetch(`/api/stores`),
         ]);
 
         if (!sellersRes.ok || !storesRes.ok) throw new Error("Falha ao carregar dados da loja.");
@@ -85,19 +114,12 @@ export function GoalGetterDashboard({ storeId }: { storeId: string }) {
         const currentStoreDetails = storesData.find(s => s.id === storeId);
         setCurrentStore(currentStoreDetails || null);
 
-        // Tenta buscar as metas
         const goalsRes = await fetch(`/api/goals/${storeId}`);
         let goalsData;
 
         if (goalsRes.status === 404) {
-          // **LÓGICA INTELIGENTE:** Se não encontrar (404), usa as metas padrão
-          toast({
-            title: "Configuração Inicial",
-            description: "Esta loja ainda não tem metas salvas. Carregando valores padrão.",
-          });
           goalsData = getInitialState().goals.default;
         } else if (!goalsRes.ok) {
-          // Se for outro erro, aí sim é um problema
           throw new Error("Falha ao carregar metas da loja.");
         } else {
           goalsData = await goalsRes.json();
@@ -105,12 +127,9 @@ export function GoalGetterDashboard({ storeId }: { storeId: string }) {
 
         reset({ sellers: sellersData, goals: goalsData });
         
-        // Lógica de seleção de aba
         const tabFromUrl = searchParams.get("tab");
         const sellersForStore = sellersData || [];
         let tabToActivate = tabFromUrl || (adminAuthenticated ? "admin" : sellersForStore.length > 0 ? sellersForStore[0].id : "admin");
-        
-        // ... (lógica de verificação de abas e redirecionamento)
         
         setActiveTab(tabToActivate);
 
@@ -122,18 +141,100 @@ export function GoalGetterDashboard({ storeId }: { storeId: string }) {
     fetchData();
   }, [storeId, reset, router, toast, searchParams]);
   
-  // As outras funções (addSeller, handleSaveGoals, etc.) não precisam de mudança
-  const handleSaveGoals = useCallback(async () => { /* ... */ }, []);
-  const addSeller = useCallback(async (name: string, pass: string) => { /* ... */ }, []);
-  const handleIncentivesCalculated = useCallback((newIncentives: Incentives) => { /* ... */ }, []);
-  const handleTabChange = (newTab: string) => { /* ... */ };
+  const handleSaveGoals = useCallback(async () => {
+     const goals = getValues().goals as Goals;
+    try {
+        const response = await fetch(`/api/goals/${storeId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(goals)
+        });
+        if (!response.ok) throw new Error("Falha ao salvar as metas.");
+        
+        toast({ title: "Metas Salvas!", description: "As novas metas e prêmios foram salvos com sucesso.", action: <CheckCircle className="text-green-500" /> });
+    } catch (error) {
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar as metas." });
+    }
+  }, [getValues, storeId, toast]);
 
+  const addSeller = useCallback(async (name: string, pass: string) => {
+    const currentSellers = getValues("sellers") || [];
+    const existingAvatarIds = new Set(currentSellers.map((s) => s.avatar_id));
+    let randomAvatarId = availableAvatarIds[Math.floor(Math.random() * availableAvatarIds.length)];
+
+    if (existingAvatarIds.size < availableAvatarIds.length) {
+      while (existingAvatarIds.has(randomAvatarId)) {
+        randomAvatarId = availableAvatarIds[Math.floor(Math.random() * availableAvatarIds.length)];
+      }
+    }
+
+    try {
+        const response = await fetch(`/api/sellers/${storeId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, password: pass, avatarId: randomAvatarId })
+        });
+        if (!response.ok) throw new Error("Falha ao adicionar vendedor");
+
+        const newSellerData = await response.json();
+        // Garantir que todos os campos obrigatórios estejam presentes
+        const newSeller: Seller = {
+            id: newSellerData.id,
+            name: newSellerData.name,
+            password: newSellerData.password,
+            avatarId: newSellerData.avatar_id ?? "",
+            vendas: newSellerData.vendas ?? 0,
+            pa: newSellerData.pa ?? 0,
+            ticketMedio: newSellerData.ticket_medio ?? 0,
+            corridinhaDiaria: newSellerData.corridinha_diaria ?? 0,
+        };
+        setValue(
+          "sellers",
+          [
+            ...getValues("sellers").map((s) => ({
+              id: s.id ?? "",
+              name: s.name ?? "",
+              password: s.password ?? "",
+              avatar_id: (s as any).avatar_id ?? (s as any).avatarId ?? "",
+              vendas: typeof s.vendas === "number" ? s.vendas : Number(s.vendas) || 0,
+              pa: typeof s.pa === "number" ? s.pa : Number(s.pa) || 0,
+              ticket_medio: typeof (s as any).ticket_medio === "number" ? (s as any).ticket_medio : Number((s as any).ticket_medio ?? (s as any).ticketMedio) || 0,
+              corridinha_diaria: typeof (s as any).corridinha_diaria === "number" ? (s as any).corridinha_diaria : Number((s as any).corridinha_diaria ?? (s as any).corridinhaDiaria) || 0,
+            })),
+            {
+              id: newSeller.id ?? "",
+              name: newSeller.name ?? "",
+              password: newSeller.password ?? "",
+              avatar_id: newSeller.avatarId ?? newSeller.avatarId ?? "",
+              vendas: typeof newSeller.vendas === "number" ? newSeller.vendas : Number(newSeller.vendas) || 0,
+              pa: typeof newSeller.pa === "number" ? newSeller.pa : Number(newSeller.pa) || 0,
+              ticket_medio: typeof newSeller.ticketMedio === "number" ? newSeller.ticketMedio : Number(newSeller.ticketMedio ?? newSeller.ticketMedio) || 0,
+              corridinha_diaria: typeof newSeller.corridinhaDiaria === "number" ? newSeller.corridinhaDiaria : Number(newSeller.corridinhaDiaria ?? newSeller.corridinhaDiaria) || 0,
+            }
+          ]
+        );
+        toast({ title: "Vendedor adicionado!", description: `${name} foi adicionado(a) com sucesso.` });
+        router.push(`/dashboard/${storeId}?tab=${newSeller.id}`, { scroll: false });
+
+    } catch (error) {
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o vendedor." });
+    }
+  }, [getValues, setValue, storeId, router, toast]);
+
+  const handleIncentivesCalculated = useCallback((newIncentives: Incentives) => {
+    setIncentives(newIncentives);
+  }, []);
+  
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    router.push(`/dashboard/${storeId}?tab=${newTab}`, { scroll: false });
+  };
+  
   if (activeTab === "loading") {
     return <DashboardSkeleton />;
   }
 
   return (
-    // Seu JSX para o painel continua aqui, sem alterações.
     <div className="container mx-auto p-4 py-8 md:p-8 relative">
         <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <h1 className="text-3xl font-bold font-headline text-primary">
@@ -184,24 +285,21 @@ export function GoalGetterDashboard({ storeId }: { storeId: string }) {
                                 />
                             </TabsContent>
                         )}
-                        {getValues("sellers").map((seller) => {
-                            // Map snake_case fields to camelCase for SellerTab
-                            const sellerForTab = {
-                                ...seller,
-                                ticketMedio: seller.ticket_medio,
-                                corridinhaDiaria: seller.corridinha_diaria,
-                            };
-                            return (
-                                <TabsContent key={seller.id} value={seller.id} className="mt-6">
-                                    <SellerTab
-                                        seller={sellerForTab}
-                                        goals={getValues().goals as Goals}
-                                        incentives={incentives[seller.id]}
-                                        rankings={rankings[seller.id]}
-                                    />
-                                </TabsContent>
-                            );
-                        })}
+                        {getValues("sellers").map((seller) => (
+                            <TabsContent key={seller.id} value={seller.id} className="mt-6">
+                                <SellerTab
+                                    seller={{
+                                        ...seller,
+                                        avatarId: seller.avatar_id,
+                                        ticketMedio: seller.ticket_medio,
+                                        corridinhaDiaria: seller.corridinha_diaria,
+                                    }}
+                                    goals={getValues().goals as Goals}
+                                    incentives={incentives[seller.id]}
+                                    rankings={rankings[seller.id]}
+                                />
+                            </TabsContent>
+                        ))}
                     </Tabs>
                 </TooltipProvider>
             </form>
