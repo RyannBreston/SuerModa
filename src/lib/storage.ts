@@ -1,7 +1,6 @@
-// src/lib/storage.ts
 import { IncentiveProjectionOutput } from "@/ai/flows/incentive-projection";
 
-// TIPOS DE DADOS (ainda muito úteis em toda a aplicação)
+// TIPOS DE DADOS
 export interface Seller {
   id: string;
   name: string;
@@ -44,17 +43,16 @@ export interface Goals {
 export type Incentives = Record<string, IncentiveProjectionOutput | null>;
 
 export interface Store {
-    id: string;
-    name: string;
-    theme_color: string; // Corrigido para corresponder ao DB
+  id: string;
+  name: string;
+  theme_color: string; // Corrigido para corresponder ao DB
 }
 
-// O AppState pode ser útil para tipar o estado geral em componentes, se necessário.
 export interface AppState {
-    stores: Store[];
-    sellers: Record<string, Seller[]>;
-    goals: Record<string, Goals>;
-    incentives: Record<string, Incentives>;
+  stores: Store[];
+  sellers: Record<string, Seller[]>;
+  goals: Record<string, Goals>;
+  incentives: Record<string, Incentives>;
 }
 
 const defaultGoals: Goals = {
@@ -85,17 +83,14 @@ const defaultGoals: Goals = {
   ticketMedioPrize4: 20,
 };
 
-// FUNÇÃO PARA OBTER O ESTADO INICIAL (usada na criação de novas lojas na API)
+// Função usada para inicializar novas lojas na API
 export function getInitialState(): AppState {
-    return {
-        stores: [],
-        sellers: {},
-        goals: {
-            'default': defaultGoals,
-        },
-        incentives: {},
-    }
+  return {
+    stores: [],
+    sellers: {},
+    goals: {
+      default: defaultGoals,
+    },
+    incentives: {},
+  };
 }
-
-// As funções que interagiam com o localStorage (loadState, saveState, etc.)
-// foram removidas, pois a aplicação agora utiliza a API para persistir os dados.
