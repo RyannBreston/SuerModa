@@ -1,3 +1,4 @@
+// src/app/login/page.tsx
 "use client";
 
 import { useState, Suspense, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, KeyRound, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { getAdminPassword } from '@/lib/storage';
+// A importação de 'getAdminPassword' foi removida
 
 function LoginComponent() {
   const [password, setPassword] = useState('');
@@ -31,20 +32,32 @@ function LoginComponent() {
   }, [router, redirectUrl]);
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    const adminPassword = getAdminPassword();
-
-    if (password === adminPassword) {
-      sessionStorage.setItem('adminAuthenticated', 'true');
-      toast({
-        title: 'Acesso concedido!',
-        description: 'Bem-vindo, administrador.',
+    try {
+      const response = await fetch('/api/auth/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
       });
-      router.push(redirectUrl);
-    } else {
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        sessionStorage.setItem('adminAuthenticated', 'true');
+        toast({
+          title: 'Acesso concedido!',
+          description: 'Bem-vindo, administrador.',
+        });
+        router.push(redirectUrl);
+      } else {
+        throw new Error('Senha incorreta');
+      }
+    } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Senha incorreta',
@@ -118,5 +131,3 @@ export default function LoginPage() {
         </Suspense>
     )
 }
-
-    
