@@ -1,10 +1,7 @@
+// src/lib/storage.ts
 import { IncentiveProjectionOutput } from "@/ai/flows/incentive-projection";
 
-const LOCAL_STORAGE_KEY = "goalGetterState_v2";
-const ADMIN_PASSWORD_KEY = "goalGetterAdminPassword";
-const DEFAULT_ADMIN_PASSWORD = "supermoda";
-
-
+// TIPOS DE DADOS (ainda muito úteis em toda a aplicação)
 export interface Seller {
   id: string;
   name: string;
@@ -49,9 +46,10 @@ export type Incentives = Record<string, IncentiveProjectionOutput | null>;
 export interface Store {
     id: string;
     name: string;
-    themeColor: string;
+    theme_color: string; // Corrigido para corresponder ao DB
 }
 
+// O AppState pode ser útil para tipar o estado geral em componentes, se necessário.
 export interface AppState {
     stores: Store[];
     sellers: Record<string, Seller[]>;
@@ -87,113 +85,17 @@ const defaultGoals: Goals = {
   ticketMedioPrize4: 20,
 };
 
-
+// FUNÇÃO PARA OBTER O ESTADO INICIAL (usada na criação de novas lojas na API)
 export function getInitialState(): AppState {
-    const store1Id = 'minha-primeira-loja';
     return {
-        stores: [
-            { id: store1Id, name: 'Minha Loja', themeColor: '217.2 32.6% 17.5%' },
-        ],
-        sellers: {
-            [store1Id]: [],
-        },
+        stores: [],
+        sellers: {},
         goals: {
             'default': defaultGoals,
-            [store1Id]: defaultGoals,
         },
-        incentives: {
-            [store1Id]: {},
-        },
+        incentives: {},
     }
 }
 
-function mergeWithInitialState(savedState: AppState): AppState {
-    const initialState = getInitialState();
-    
-    if (!savedState.stores || savedState.stores.length === 0) {
-        return initialState;
-    }
-    
-    savedState.stores.forEach(store => {
-      if (!store.themeColor) {
-        store.themeColor = '217.2 32.6% 17.5%'; 
-      }
-      if (!savedState.sellers[store.id]) {
-        savedState.sellers[store.id] = [];
-      }
-      if (!savedState.goals[store.id]) {
-        savedState.goals[store.id] = defaultGoals;
-      }
-      if (!savedState.incentives[store.id]) {
-        savedState.incentives[store.id] = {};
-      }
-    });
-
-    Object.keys(savedState.sellers).forEach(storeId => {
-      savedState.sellers[storeId].forEach(seller => {
-        if (!seller.password) {
-          seller.password = seller.name.toLowerCase();
-        }
-         if (!seller.avatarId) {
-          seller.avatarId = `avatar${(Math.floor(Math.random() * 10) + 1)}`;
-        }
-      });
-    });
-
-    return savedState;
-}
-
-
-export function loadState(): AppState {
-    if (typeof window === 'undefined') {
-        return getInitialState();
-    }
-    try {
-        const v2StateRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
-
-        if (v2StateRaw) {
-            const parsed = JSON.parse(v2StateRaw) as AppState;
-            if (parsed && parsed.stores && parsed.sellers) {
-                return mergeWithInitialState(parsed);
-            }
-        }
-        
-        const initialState = getInitialState();
-        saveState(initialState);
-        return initialState;
-
-    } catch (error) {
-        console.error("Could not load state from localStorage", error);
-        return getInitialState();
-    }
-}
-
-export function saveState(state: AppState) {
-    if (typeof window === 'undefined') {
-        return;
-    }
-    try {
-        const serializedState = JSON.stringify(state);
-        localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
-        window.dispatchEvent(new CustomEvent('storage_updated'));
-    } catch (error) {
-        console.error("Could not save state to localStorage", error);
-    }
-}
-
-
-export function getAdminPassword(): string {
-    if (typeof window === 'undefined') {
-        return DEFAULT_ADMIN_PASSWORD;
-    }
-    return localStorage.getItem(ADMIN_PASSWORD_KEY) || DEFAULT_ADMIN_PASSWORD;
-}
-
-export function setAdminPassword(password: string) {
-     if (typeof window === 'undefined') {
-        return;
-    }
-    localStorage.setItem(ADMIN_PASSWORD_KEY, password);
-}
-
-    
+// As funções que interagiam com o localStorage (loadState, saveState, etc.)
+// foram removidas, pois a aplicação agora utiliza a API para persistir os dados.
