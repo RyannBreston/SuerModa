@@ -37,3 +37,4 @@ Após a conclusão, o terminal mostrará a URL onde seu aplicativo está publica
 # aceleracatu
 # aceleracatu
 # aceleracatu
+# aceleragt
